@@ -46,7 +46,7 @@
       <HintPath>..\packages\AWSSDK.SimpleNotificationService.3.3.0.24\lib\net45\AWSSDK.SimpleNotificationService.dll</HintPath>
     </Reference>
     <Reference Include="inRiver.Remoting, Version=7.3.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\inRiver.Remoting.iPMC.7.3.19133.3\lib\net461\inRiver.Remoting.dll</HintPath>
+      <HintPath>..\packages\inRiver.Remoting.iPMC.7.3.19241.1\lib\net461\inRiver.Remoting.dll</HintPath>
     </Reference>
     <Reference Include="Microsoft.JScript" />
     <Reference Include="Newtonsoft.Json, Version=11.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">

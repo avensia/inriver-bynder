@@ -1,4 +1,5 @@
-﻿using Bynder.Api;
+﻿using System;
+using Bynder.Api;
 using Bynder.Names;
 using Bynder.Utils;
 using inRiver.Remoting.Extension;
@@ -21,14 +22,20 @@ namespace Bynder.Workers
             _fileNameEvaluator = fileNameEvaluator;
         }
 
-        public WorkerResult Execute(string bynderAssetId)
+        public WorkerResult Execute(string bynderAssetId, DateTime? lastRunTime = null)
         {
             var result = new WorkerResult();
 
             // get original filename, as we need to evaluate this for further processing
             var asset = _bynderClient.GetAssetByAssetId(bynderAssetId);
 
-            string originalFileName = asset.GetOriginalFileName();
+            var originalFileName = asset.GetOriginalFileName();
+
+            if (lastRunTime.HasValue && asset.DateModified < lastRunTime)
+            {
+                result.Messages.Add($"Not processing '{originalFileName}'; not modified since {lastRunTime}.");
+                return result;
+            }
 
             // evaluate filename
             var evaluatorResult = _fileNameEvaluator.Evaluate(originalFileName);

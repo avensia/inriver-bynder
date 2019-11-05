@@ -1,21 +1,64 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Globalization;
 using System.Linq;
-using System.Security.Cryptography.X509Certificates;
 using Bynder.Api;
 using Bynder.Workers;
-using inRiver.Remoting;
-using inRiver.Remoting.Connect;
 using inRiver.Remoting.Extension.Interface;
 using inRiver.Remoting.Log;
 using inRiver.Remoting.Objects;
-using inRiver.Remoting.Util;
+using Newtonsoft.Json;
 
 namespace Bynder.Extension
 {
     public class AssetLoader : Extension, IScheduledExtension
     {
+        private readonly Lazy<ConnectorState> _lazyConnectorState;
+        private ConnectorState ConnectorState => _lazyConnectorState.Value;
+
+        private readonly Lazy<DateTime?> _lazyLastRunTime;
+        private DateTime? LastRunTime => _lazyLastRunTime.Value;
+
+        private string ScheduledRun => Context.Settings[Config.Settings.ScheduledTime];
+
+        public AssetLoader()
+        {
+            _lazyConnectorState = new Lazy<ConnectorState>(() =>
+            {
+                var connectorStates = Context.ExtensionManager.UtilityService.GetAllConnectorStatesForConnector(Context.ExtensionId);
+                if (connectorStates.Any())
+                {
+                    return connectorStates.Select(state => (state.Modified, state: state)).Max().state;
+                }
+
+                var newConnectorState = new ConnectorState
+                {
+                    ConnectorId = Context.ExtensionId,
+                    Data = null
+                };
+                return Context.ExtensionManager.UtilityService.AddConnectorState(newConnectorState);
+            });
+
+            _lazyLastRunTime = new Lazy<DateTime?>(() =>
+            {
+                if (string.IsNullOrEmpty(ConnectorState.Data))
+                {
+                    return null;
+                }
+
+                try
+                {
+                    return JsonConvert.DeserializeObject<DateTime?>(ConnectorState.Data);
+                }
+                catch (JsonException jsonException)
+                {
+                    Context.Log(LogLevel.Error,
+                        $"Failed to deserialize connector state data as DateTime?. Data: {ConnectorState.Data}",
+                        jsonException);
+                }
+
+                return null;
+            });
+        }
+
         /// <summary>
         /// Get a list of all assetIds from Bynder using the configured filter Query
         /// which will be executed against api/v4/media/?-----
@@ -23,18 +66,14 @@ namespace Bynder.Extension
         /// </summary>
         public void Execute(bool force)
         {
-            if (!force)
-            {
-                if (!ScheduledTime()) return;
-            }
-
             try
             {
-
                 Context.Logger.Log(LogLevel.Information, "Start loading assets");
 
                 var worker = Container.GetInstance<AssetUpdatedWorker>();
                 var bynderClient = Container.GetInstance<BynderClient>();
+                var lastRunTime = FullSync() ? null : LastRunTime;
+                var startTime = DateTime.Now;
 
                 // get all assets ids
                 // note: this is a paged result set, call next page until reaching end.
@@ -42,88 +81,53 @@ namespace Bynder.Extension
                 var assetCollection = bynderClient.GetAssetCollection(Context.Settings[Config.Settings.InitialAssetLoadUrlQuery]);
                 Context.Logger.Log(LogLevel.Information, $"Start processing {assetCollection.GetTotal()} assets.");
 
-                assetCollection.Media.ForEach(a => worker.Execute(a.Id));
-                counter += assetCollection.Media.Count;
-                while (!assetCollection.IsLastPage())
+                while(true)
                 {
+                    assetCollection.Media.ForEach(a => worker.Execute(a.Id, lastRunTime));
+                    counter += assetCollection.Media.Count;
+                    Context.Logger.Log(LogLevel.Information, $"Processed {counter} assets.");
+
+                    if (assetCollection.IsLastPage())
+                    {
+                        break;
+                    }
+
                     // when not reached end get next group of assets
                     assetCollection = bynderClient.GetAssetCollection(
                         Context.Settings[Config.Settings.InitialAssetLoadUrlQuery],
                         assetCollection.GetNextPage());
-                    assetCollection.Media.ForEach(a => worker.Execute(a.Id));
-                    counter += assetCollection.Media.Count;
-                    Context.Logger.Log(LogLevel.Information, $"Processed {counter} assets.");
                 }
-                Context.Logger.Log(LogLevel.Information, "Initial Import Successful!");
 
-                SaveConnectorState(DateTime.Now);
+                ConnectorState.Data = JsonConvert.SerializeObject(startTime);
+                Context.ExtensionManager.UtilityService.UpdateConnectorState(ConnectorState);
+
+                Context.Logger.Log(LogLevel.Information, "Initial Import Successful!");
             }
-            catch (System.Exception ex)
+            catch (Exception ex)
             {
                 Context.Log(LogLevel.Error, ex.GetBaseException().Message, ex);
             }
         }
 
-        private bool ScheduledTime()
+        private bool FullSync()
         {
-            var currentDateTime = DateTime.Now;
-            var connectorStates = Context.ExtensionManager.UtilityService.GetAllConnectorStatesForConnector(Context.ExtensionId);
-            if (connectorStates.Count.Equals(0))
+            if (!TryGetHoursAndMinutes(out var hours, out var minutes))
             {
-                var newConnectorState = new ConnectorState
-                {
-                    ConnectorId = Context.ExtensionId,
-                    Data = currentDateTime.ToString("g")
-                };
-                Context.ExtensionManager.UtilityService.AddConnectorState(newConnectorState);
-                return true;
+                return false;
             }
 
-            var connectorState = connectorStates.Count > 1 ? connectorStates.OrderBy(state => state.Created).Last() : connectorStates.Single();
+            var now = DateTime.Now;
+            var todaysRunTime = DateTime.Today.AddHours(hours).AddMinutes(minutes);
+            return now >= todaysRunTime && !(LastRunTime >= todaysRunTime);
 
-            var lastRunTime = connectorState.Data;
-            if (string.IsNullOrEmpty(lastRunTime)) return false;
-
-
-            var (hours, minutes) = GetHoursAndMinutes();
-
-            if (currentDateTime.Hour.Equals(hours) && currentDateTime.Minute >= minutes)
-            {
-                var oneDayTimeSpan = new TimeSpan(24, 0, 0);
-                if (currentDateTime.Subtract(oneDayTimeSpan) >= DateTime.Parse(lastRunTime))
-                {
-                    DeleteConnectorStates(connectorStates);
-                    return true;
-                }
-            }
-            return false;
         }
 
-        private void SaveConnectorState(DateTime dateTime)
+        private bool TryGetHoursAndMinutes(out int hours, out int minutes)
         {
-            var connectorState = new ConnectorState
-            {
-                ConnectorId = Context.ExtensionId,
-                Data = dateTime.ToString("g")
-            };
-            Context.ExtensionManager.UtilityService.AddConnectorState(connectorState);
-        }
-
-        private void DeleteConnectorStates(List<ConnectorState> connectorStates)
-        {
-            Context.ExtensionManager.UtilityService.DeleteConnectorStates(connectorStates.Select(c => c.Id).ToList());
-        }
-
-        private (int, int) GetHoursAndMinutes()
-        {
+            hours = 0;
+            minutes = 0;
             var time = ScheduledRun.Split(':');
-            if (int.TryParse(time[0], out var hours) && int.TryParse(time[1], out var minutes))
-            {
-                return (hours, minutes);
-            }
-            return (6, 0);
+            return time.Length > 1 && int.TryParse(time[0], out hours) && int.TryParse(time[1], out minutes);
         }
-
-        private string ScheduledRun => Context.Settings[Config.Settings.ScheduledTime];
     }
 }
