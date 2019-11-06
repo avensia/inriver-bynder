@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -8,6 +9,7 @@ namespace Bynder.Api.Model
         private const string Original = "original";
         public string Id { get; set; }
         public string IdHash { get; set; }
+        public DateTime DateModified { get; set; }
 
         public List<MediaItem> MediaItems { get; set; }
 
