@@ -18,7 +18,7 @@ namespace Bynder.Extension
         private readonly Lazy<DateTime?> _lazyLastRunTime;
         private DateTime? LastRunTime => _lazyLastRunTime.Value;
 
-        private string ScheduledRun => Context.Settings[Config.Settings.ScheduledTime];
+        private string ScheduledRun => Context.Settings[Config.Settings.FullSyncScheduledTime];
 
         public AssetLoader()
         {

@@ -8,6 +8,6 @@
         public const string inriverIntegrationId = "INRIVER_INTEGRATION_ID";
         public const string inriverEntityUrl = "INRIVER_RESOURCE_URL";
         public const string bynderBrandName = "BYNDER_BRAND_NAME";
-        public const string ScheduledTime = "SCHEDULED_TIME";
+        public const string FullSyncScheduledTime = "FULL_SYNC_SCHEDULED_TIME";
     }
 }
