@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq;
 using Bynder.Api;
+using Bynder.Api.Model;
 using Bynder.Workers;
 using inRiver.Remoting.Extension.Interface;
 using inRiver.Remoting.Log;
@@ -80,22 +81,15 @@ namespace Bynder.Extension
                 var counter = 0;
                 var assetCollection = bynderClient.GetAssetCollection(Context.Settings[Config.Settings.InitialAssetLoadUrlQuery]);
                 Context.Logger.Log(LogLevel.Information, $"Start processing {assetCollection.GetTotal()} assets.");
+                ProcessAssets(assetCollection, worker, lastRunTime, ref counter);
 
-                while(true)
+                while (!assetCollection.IsLastPage())
                 {
-                    assetCollection.Media.ForEach(a => worker.Execute(a.Id, lastRunTime));
-                    counter += assetCollection.Media.Count;
-                    Context.Logger.Log(LogLevel.Information, $"Processed {counter} assets.");
-
-                    if (assetCollection.IsLastPage())
-                    {
-                        break;
-                    }
-
                     // when not reached end get next group of assets
                     assetCollection = bynderClient.GetAssetCollection(
                         Context.Settings[Config.Settings.InitialAssetLoadUrlQuery],
                         assetCollection.GetNextPage());
+                    ProcessAssets(assetCollection, worker, lastRunTime, ref counter);
                 }
 
                 ConnectorState.Data = JsonConvert.SerializeObject(startTime);
@@ -107,6 +101,14 @@ namespace Bynder.Extension
             {
                 Context.Log(LogLevel.Error, ex.GetBaseException().Message, ex);
             }
+        }
+
+        private void ProcessAssets(AssetCollection assetCollection, AssetUpdatedWorker worker, DateTime? lastRunTime,
+            ref int counter)
+        {
+            assetCollection.Media.ForEach(a => worker.Execute(a.Id, lastRunTime));
+            counter += assetCollection.Media.Count;
+            Context.Logger.Log(LogLevel.Information, $"Processed {counter} assets.");
         }
 
         private bool FullSync()
