@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using inRiver.Remoting;
 using inRiver.Remoting.Extension;
 using inRiver.Remoting.Log;
@@ -16,14 +16,14 @@ namespace BynderTest
         // todo: Add your settings here
         protected Dictionary<string,string> TestSettings = new Dictionary<string, string>
         {
-            {Bynder.Api.SettingNames.ConsumerKey, "***" },
-            {Bynder.Api.SettingNames.ConsumerSecret, "***" },
-            {Bynder.Api.SettingNames.CustomerBynderUrl, "***.getbynder.com" },
-            {Bynder.Api.SettingNames.Token, "***" },
-            {Bynder.Api.SettingNames.TokenSecret, "***" },
+            {Bynder.Api.SettingNames.ConsumerKey, "94BE8A9A-C207-48E1-8CB9D21024CAC20D" },
+            {Bynder.Api.SettingNames.ConsumerSecret, "bcc5d2feaa2d678ef75993a814792f20" },
+            {Bynder.Api.SettingNames.CustomerBynderUrl, "https://assets.sigvaris.com" },
+            {Bynder.Api.SettingNames.Token, "C36D7718-E23D-4B1D-BC291F7A7ED7E662" },
+            {Bynder.Api.SettingNames.TokenSecret, "a87d4efa6677a8d9986b1d25b2d3b110" },
             {Bynder.Config.Settings.RegularExpressionForFileName, @"^(?<ProductNumber>[0-9a-zA-Z]+)_(?<ResourceType>image|document)_(?<ResourcePosition>[0-9]+)" },
-            {Bynder.Config.Settings.InitialAssetLoadUrlQuery, @"type=image" },
-            {Bynder.Config.Settings.MetapropertyMap, @"C7BC01E1-670D-4410-A7B81E9032FE261A=ResourcePosition,C284234B-29B6-4CA8-B907B728455F30EA=ProductNumber" },
+            {Bynder.Config.Settings.InitialAssetLoadUrlQuery, @"tags=PIM" },
+            {Bynder.Config.Settings.MetapropertyMap, @"" },
             {Bynder.Config.Settings.bynderBrandName, "" }
         };
 
@@ -33,13 +33,9 @@ namespace BynderTest
             Logger = new Logger(TestContext);
             Logger.Log(LogLevel.Information, $"Initialize connection to inRiver Server");
 
-            // Customer: https://remoting.productmarketingcloud.com
-            // Sandbox:  https://partner.remoting.productmarketingcloud.com
-
-            // todo: add your inRiver username, password and environment here 
             InRiverContext = new inRiverContext(
-                RemoteManager.CreateInstance("https://partner.remoting.productmarketingcloud.com",
-                    "***", "***", "***"), Logger);
+                RemoteManager.CreateInstance("https://remoting.productmarketingcloud.com",
+                    "sigvaris@avensia.com", "Abcd!234", "test"), Logger);
 
             Assert.IsNotNull(InRiverContext, "Login failed ??");
         }
