@@ -35,6 +35,8 @@ namespace Bynder.Api.Model
 
             return mimeType;
         }
+
+        public const string DefaultThumbnailType = "webimage";
     }
 
     public enum AssetType

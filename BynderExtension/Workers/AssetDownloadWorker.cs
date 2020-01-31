@@ -28,11 +28,12 @@ namespace Bynder.Workers
             }
 
             var bynderDownloadStateField = resourceEntity.GetField(FieldTypeIds.ResourceBynderDownloadState);
-            string bynderDownloadState = (string)bynderDownloadStateField?.Data;
+            string bynderDownloadState = (string) bynderDownloadStateField?.Data;
 
             if (string.IsNullOrWhiteSpace(bynderDownloadState) || bynderDownloadState != BynderStates.Todo) return;
 
             string bynderId = (string)resourceEntity.GetField(FieldTypeIds.ResourceBynderId)?.Data;
+
             if (string.IsNullOrWhiteSpace(bynderId)) return;
 
             // download asset information
@@ -54,21 +55,34 @@ namespace Bynder.Workers
 
             if (asset.Type == AssetType.Video)
             {
-                if (asset.Thumbnails.TryGetValue("webimage", out var previewUrl))
+                if (asset.Thumbnails.TryGetValue(Asset.DefaultThumbnailType, out var previewUrl) && !string.IsNullOrWhiteSpace(previewUrl))
                 {
-                    var fileId = _inRiverContext.ExtensionManager.UtilityService.AddFileFromUrl(asset.GetOriginalFileName(), previewUrl);
-                    resourceEntity.GetField(FieldTypeIds.ResourceFileId).Data = fileId;
+                    try
+                    {
+                        var fileId = _inRiverContext.ExtensionManager.UtilityService.AddFileFromUrl(asset.GetOriginalFileName(), previewUrl);
+                        resourceEntity.GetField(FieldTypeIds.ResourceFileId).Data = fileId;
+                    }
+                    catch
+                    {
+                        DownloadFailed(bynderDownloadStateField, $"Could not download {Asset.DefaultThumbnailType}-thumbnail for asset with Id {asset.Id}, previewUrl: {previewUrl}, resource entity: {resourceEntity.Id}");
+                        
+                        return;
+                    }
+                }
+                else
+                {
+                    DownloadFailed(bynderDownloadStateField, $"Could not download {Asset.DefaultThumbnailType}-thumbnail for asset with Id {asset.Id}, previewUrl: {previewUrl}, resource entity: {resourceEntity.Id}");
+                    
+                    return;
                 }
             }
             else
             {
                 var file = _bynderClient.DownloadAsset(asset.Id);
+
                 if (file == null)
                 {
-                    _inRiverContext.Log(LogLevel.Error, $"Could not download asset with Id {asset.Id}");
-
-                    bynderDownloadStateField.Data = BynderStates.Error;
-                    _inRiverContext.ExtensionManager.DataService.UpdateFieldsForEntity(new List<Field> {bynderDownloadStateField});
+                    DownloadFailed(bynderDownloadStateField, $"Could not download asset with Id {asset.Id}, resource entity: {resourceEntity.Id}");
 
                     return;
                 }
@@ -105,6 +119,13 @@ namespace Bynder.Workers
 
             _inRiverContext.ExtensionManager.DataService.UpdateEntity(resourceEntity);
             _inRiverContext.Log(LogLevel.Information, $"Updated resource entity {resourceEntity.Id}");
+        }
+
+        private void DownloadFailed(Field bynderDownloadStateField, string message)
+        {
+            _inRiverContext.Log(LogLevel.Error, message);
+            bynderDownloadStateField.Data = BynderStates.Error;
+            _inRiverContext.ExtensionManager.DataService.UpdateFieldsForEntity(new List<Field> {bynderDownloadStateField});
         }
     }
 }
