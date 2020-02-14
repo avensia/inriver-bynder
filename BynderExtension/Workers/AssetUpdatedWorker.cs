@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Bynder.Api;
 using Bynder.Names;
 using Bynder.Utils;
@@ -73,6 +73,7 @@ namespace Bynder.Workers
 
             // save IdHash for re-creation of public CDN Urls in inRiver
             resourceEntity.GetField(FieldTypeIds.ResourceBynderIdHash).Data = asset.IdHash;
+            resourceEntity.GetField(FieldTypeIds.ResourceType).Data = asset.Type.ToString("G");
 
             var resultString = new StringBuilder();
             if (resourceEntity.Id == 0)

@@ -9,6 +9,8 @@ namespace Bynder.Api.Model
         private const string Original = "original";
         public string Id { get; set; }
         public string IdHash { get; set; }
+        public AssetType Type { get; set; }
+        public Dictionary<string, string> Thumbnails { get; set; }
         public DateTime DateModified { get; set; }
 
         public List<MediaItem> MediaItems { get; set; }
@@ -33,5 +35,12 @@ namespace Bynder.Api.Model
 
             return mimeType;
         }
+
+        public const string DefaultThumbnailType = "webimage";
+    }
+
+    public enum AssetType
+    {
+        Image, Video, Document
     }
 }

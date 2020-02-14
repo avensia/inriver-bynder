@@ -1,4 +1,4 @@
-﻿using Bynder.Api;
+using Bynder.Api;
 using Bynder.Api.Model;
 using Bynder.Extension;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -8,16 +8,16 @@ namespace BynderTest
     [TestClass]
     public class ApiTest : TestBase
     {
-        private const string _testAssetId = "9542A933-2DF5-4999-9AB52701F33613C0";
+        private const string _testAssetId = "73843ABB-B585-40C3-A9E217C9C06CD23C";
         private const string _testIntegrationId = "41a92562-bfd9-4847-a34d-4320bcef5e4a";
 
         private readonly BynderClientSettings _bynderSettings = new BynderClientSettings()
         {
-            ConsumerKey = "***",
-            ConsumerSecret = "***",
-            CustomerBynderUrl = "***",
-            Token = "***",
-            TokenSecret = "***"
+            ConsumerKey = "94BE8A9A-C207-48E1-8CB9D21024CAC20D",
+            ConsumerSecret = "bcc5d2feaa2d678ef75993a814792f20",
+            CustomerBynderUrl = "https://assets.sigvaris.com",
+            Token = "C36D7718-E23D-4B1D-BC291F7A7ED7E662",
+            TokenSecret = "a87d4efa6677a8d9986b1d25b2d3b110"
         };
                 
         [TestMethod]
