@@ -60,6 +60,9 @@ namespace Bynder.Workers
                     try
                     {
                         var fileId = _inRiverContext.ExtensionManager.UtilityService.AddFileFromUrl(asset.GetOriginalFileName(), previewUrl);
+                        var meta = _inRiverContext.ExtensionManager.UtilityService.GetResourceFile(fileId);
+                        meta.Extension = "jpg";
+                        _inRiverContext.ExtensionManager.UtilityService.UpdateResourceFile(meta);
                         resourceEntity.GetField(FieldTypeIds.ResourceFileId).Data = fileId;
                     }
                     catch
