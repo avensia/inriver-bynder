@@ -74,7 +74,7 @@ namespace Bynder.Extension
                 var worker = Container.GetInstance<AssetUpdatedWorker>();
                 var bynderClient = Container.GetInstance<BynderClient>();
                 var lastRunTime = FullSync() ? null : LastRunTime;
-                var startTime = DateTime.Now;
+                var startTime = DateTime.Now.AddDays(1); //Do sync every other day
 
                 // get all assets ids
                 // note: this is a paged result set, call next page until reaching end.

@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Net.Http;
+using System.Threading;
 
 namespace Bynder.Api
 {
@@ -60,7 +61,7 @@ namespace Bynder.Api
                     response.EnsureSuccessStatusCode();
                     return null;
                 }
-                System.Threading.Thread.Sleep((2 ^ retryCount++) * 1000);
+                Thread.Sleep((2 ^ retryCount++) * 500);
             }
         }
 
@@ -151,6 +152,8 @@ namespace Bynder.Api
         /// <returns></returns>
         protected HttpResponseMessage SendRequest(HttpRequestMessage requestMessage)
         {
+            //Bynder have max 14 requests / s = 71.42 ms ~ delay with 70ms should be enough
+            Thread.Sleep(70);
             using (var httpClient = new HttpClient())
             {
                 SignRequestMessage(requestMessage);
