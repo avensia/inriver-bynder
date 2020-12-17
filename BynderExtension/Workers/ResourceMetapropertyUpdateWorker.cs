@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Bynder.Api;
@@ -28,17 +28,17 @@ namespace Bynder.Workers
 
             resourceEntity = _inRiverContext.ExtensionManager.DataService.EntityLoadLevel(resourceEntity, LoadLevel.DataOnly);
 
-            // block resourceEntity for bynder update if no BynderId is found on entity
-            string bynderId = (string)resourceEntity.GetField(FieldTypeIds.ResourceBynderId)?.Data;
-            if (string.IsNullOrWhiteSpace(bynderId)) return;
+            // parse setting map in dictionary
+            var configuredMetaPropertyMap = GetConfiguredMetaPropertyMap();
+            if (configuredMetaPropertyMap == null) return;
 
             // only update bynder asset if resource has status 'Done'
             string bynderStatus = (string)resourceEntity.GetField(FieldTypeIds.ResourceBynderDownloadState)?.Data;
             if (string.IsNullOrWhiteSpace(bynderStatus) || bynderStatus != BynderStates.Done) return;
 
-            // parse setting map in dictionary
-            var configuredMetaPropertyMap = GetConfiguredMetaPropertyMap();
-            if (configuredMetaPropertyMap == null) return;
+            // block resourceEntity for bynder update if no BynderId is found on entity
+            string bynderId = (string)resourceEntity.GetField(FieldTypeIds.ResourceBynderId)?.Data;
+            if (string.IsNullOrWhiteSpace(bynderId)) return;
 
             // enrich metaproperties (metapropertyId => resourcefieldValue)
             var newMetapropertyValues = new Dictionary<string, string>();

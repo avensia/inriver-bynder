@@ -62,8 +62,11 @@ namespace Bynder.Workers
                 resourceEntity.GetField(FieldTypeIds.ResourceFilename).Data = $"{bynderAssetId}_{asset.GetOriginalFileName()}";
             }
 
-            // status for new and existing ResourceEntity
-            resourceEntity.GetField(FieldTypeIds.ResourceBynderDownloadState).Data = BynderStates.Todo;
+            if (lastRunTime.HasValue || resourceEntity.Id == 0)
+            {
+                // status for new and existing ResourceEntity and full sync
+                resourceEntity.GetField(FieldTypeIds.ResourceBynderDownloadState).Data = BynderStates.Todo;
+            }
 
             // resource fields from regular expression created from filename
             foreach (var keyValuePair in evaluatorResult.GetResourceDataInFilename())

@@ -95,7 +95,7 @@ namespace Bynder.Workers
                     // check if existing ResourceFile is same size as the one in Bynder
                     var resourceFileMetaData =
                         _inRiverContext.ExtensionManager.UtilityService.GetFileMetaData(existingFileId);
-                    if (file.LongLength == resourceFileMetaData.FileSize)
+                    if (resourceFileMetaData != null && file.LongLength == resourceFileMetaData.FileSize)
                     {
                         _inRiverContext.Log(LogLevel.Debug, "Asset is the same as before. Setting the state to Done.");
                         bynderDownloadStateField.Data = BynderStates.Done;

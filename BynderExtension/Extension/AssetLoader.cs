@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using Bynder.Api;
 using Bynder.Api.Model;
@@ -15,8 +15,8 @@ namespace Bynder.Extension
         private readonly Lazy<ConnectorState> _lazyConnectorState;
         private ConnectorState ConnectorState => _lazyConnectorState.Value;
 
-        private readonly Lazy<DateTime?> _lazyLastRunTime;
-        private DateTime? LastRunTime => _lazyLastRunTime.Value;
+        private readonly Lazy<DateTime> _lazyLastRunTime;
+        private DateTime LastRunTime => _lazyLastRunTime.Value;
 
         private string ScheduledRun => Context.Settings[Config.Settings.FullSyncScheduledTime];
 
@@ -38,16 +38,16 @@ namespace Bynder.Extension
                 return Context.ExtensionManager.UtilityService.AddConnectorState(newConnectorState);
             });
 
-            _lazyLastRunTime = new Lazy<DateTime?>(() =>
+            _lazyLastRunTime = new Lazy<DateTime>(() =>
             {
                 if (string.IsNullOrEmpty(ConnectorState.Data))
                 {
-                    return null;
+                    return DateTime.MinValue;
                 }
 
                 try
                 {
-                    return JsonConvert.DeserializeObject<DateTime?>(ConnectorState.Data);
+                    return JsonConvert.DeserializeObject<DateTime?>(ConnectorState.Data) ?? DateTime.MinValue;
                 }
                 catch (JsonException jsonException)
                 {
@@ -56,7 +56,7 @@ namespace Bynder.Extension
                         jsonException);
                 }
 
-                return null;
+                return DateTime.MinValue;
             });
         }
 
@@ -73,13 +73,13 @@ namespace Bynder.Extension
 
                 var worker = Container.GetInstance<AssetUpdatedWorker>();
                 var bynderClient = Container.GetInstance<BynderClient>();
-                var lastRunTime = FullSync() ? null : LastRunTime;
+                var lastRunTime = FullSync() ? DateTime.MinValue : LastRunTime;
                 var startTime = DateTime.Now.AddDays(1); //Do sync every other day
 
                 // get all assets ids
                 // note: this is a paged result set, call next page until reaching end.
                 var counter = 0;
-                var assetCollection = bynderClient.GetAssetCollection(Context.Settings[Config.Settings.InitialAssetLoadUrlQuery]);
+                var assetCollection = bynderClient.GetAssetCollection(Context.Settings[Config.Settings.InitialAssetLoadUrlQuery], limit: 1000);
                 Context.Logger.Log(LogLevel.Information, $"Start processing {assetCollection.GetTotal()} assets.");
                 ProcessAssets(assetCollection, worker, lastRunTime, ref counter);
 
@@ -88,7 +88,7 @@ namespace Bynder.Extension
                     // when not reached end get next group of assets
                     assetCollection = bynderClient.GetAssetCollection(
                         Context.Settings[Config.Settings.InitialAssetLoadUrlQuery],
-                        assetCollection.GetNextPage());
+                        assetCollection.GetNextPage(), assetCollection.Limit);
                     ProcessAssets(assetCollection, worker, lastRunTime, ref counter);
                 }
 
