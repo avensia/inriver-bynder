@@ -23,6 +23,7 @@ namespace Bynder.Extension
                 settings.Add(Config.Settings.InitialAssetLoadUrlQuery, "type=image");
                 settings.Add(Config.Settings.RegularExpressionForFileName, @"^(?<ProductNumber>[0-9a-zA-Z]+)_(?<ResourcePosition>[0-9]+)");
                 settings.Add(Config.Settings.MetapropertyMap, "metapropertyguid1=inriverfield1,metapropertyguid2=inriverfield2");
+                settings.Add(Config.Settings.MetaPropertySetMap,@"{{""inRiverfieldid"",""metapropertyguid1""}, {""inriverfieldid2[sv]"",""metapropertyguid2""}}");
                 settings.Add(Config.Settings.inriverIntegrationId, "41a92562-bfd9-4847-a34d-4320bcef5e4a");
                 settings.Add(Config.Settings.inriverEntityUrl, "https://inriver.productmarketingcloud.com/app/enrich#entity/{entityId}/");
                 settings.Add(Config.Settings.bynderBrandName, "");

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Bynder.Api;
 using Bynder.Names;
 using Bynder.Utils;
@@ -6,6 +7,8 @@ using inRiver.Remoting.Extension;
 using inRiver.Remoting.Objects;
 using System.Linq;
 using System.Text;
+using Bynder.Api.Model;
+using Newtonsoft.Json;
 
 namespace Bynder.Workers
 {
@@ -50,6 +53,8 @@ namespace Bynder.Workers
                 _inRiverContext.ExtensionManager.DataService.GetEntityByUniqueValue(FieldTypeIds.ResourceBynderId, bynderAssetId,
                     LoadLevel.DataAndLinks);
 
+            var metapropertiesSetMap = GetConfiguredMetaPropertySetMap();
+
             if (resourceEntity == null)
             {
                 EntityType resourceType = _inRiverContext.ExtensionManager.ModelService.GetEntityType(EntityTypeIds.Resource);
@@ -62,11 +67,8 @@ namespace Bynder.Workers
                 resourceEntity.GetField(FieldTypeIds.ResourceFilename).Data = $"{bynderAssetId}_{asset.GetOriginalFileName()}";
             }
 
-            if (lastRunTime.HasValue || resourceEntity.Id == 0)
-            {
-                // status for new and existing ResourceEntity and full sync
-                resourceEntity.GetField(FieldTypeIds.ResourceBynderDownloadState).Data = BynderStates.Todo;
-            }
+            // status for new and existing ResourceEntity
+            resourceEntity.GetField(FieldTypeIds.ResourceBynderDownloadState).Data = BynderStates.Todo;
 
             // resource fields from regular expression created from filename
             foreach (var keyValuePair in evaluatorResult.GetResourceDataInFilename())
@@ -88,6 +90,12 @@ namespace Bynder.Workers
             {
                 resourceEntity = _inRiverContext.ExtensionManager.DataService.UpdateEntity(resourceEntity);
                 resultString.Append($"Resource {resourceEntity.Id} updated");
+            }
+
+            // set meta properties from asset
+            if (metapropertiesSetMap.Any())
+            {
+                SetMetaProperties(resourceEntity, asset, metapropertiesSetMap);
             }
 
             // get related entity data found in filename so we can create or update link to these entities
@@ -125,6 +133,40 @@ namespace Bynder.Workers
 
             result.Messages.Add(resultString.ToString());
             return result;
+        }
+
+        private void SetMetaProperties(Entity resourceEntity, Asset asset, Dictionary<string, string> metapropertiesSetMap)
+        {
+            foreach (var fieldMetaPropery in metapropertiesSetMap)
+            {
+                if (fieldMetaPropery.Key.Contains("["))
+                {
+                    var fieldKeyArray = fieldMetaPropery.Key.Split('[');
+                    var field = resourceEntity.GetField(fieldKeyArray[0]);
+                    if (field == null)
+                    {
+                        continue;
+                    }
+
+                    //asset.
+
+                    if (field.IsEmpty())
+                    {
+                        var localeString = new LocaleString(_inRiverContext.ExtensionManager.UtilityService.GetAllLanguages());
+                        //localeString[]
+                    }
+                }
+            }
+        }
+
+        public Dictionary<string, string> GetConfiguredMetaPropertySetMap()
+        {
+            if (_inRiverContext.Settings.ContainsKey(Config.Settings.MetaPropertySetMap))
+            {
+                return JsonConvert.DeserializeObject<Dictionary<string, string>>(_inRiverContext.Settings[Config.Settings.MetaPropertySetMap]);
+            }
+
+            return new Dictionary<string, string>();
         }
     }
 }

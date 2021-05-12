@@ -5,6 +5,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
+using Newtonsoft.Json.Linq;
 
 namespace Bynder.Api
 {
@@ -102,8 +103,17 @@ namespace Bynder.Api
         public Asset GetAssetByAssetId(string assetId)
         {
             var apiResult = GetWithRetry($"{_customerBynderUrl}/api/v4/media/{assetId}/?versions=1");
-            return JsonConvert.DeserializeObject<Asset>(apiResult);
+            var asset = JsonConvert.DeserializeObject<Asset>(apiResult);
+            var properties = JsonConvert.DeserializeObject<Dictionary<string, object>>(apiResult);
+            
+            asset.MetaProperties = properties
+                                    .Where(p => p.Key.StartsWith("property_"))
+                                    .ToDictionary(p => p.Key, p => (p.Value as JArray)?
+                                        .ToObject<List<string>>());
+
+            return asset;
         }
+
         /// <summary>
         /// get asset collection by query
         /// </summary>
