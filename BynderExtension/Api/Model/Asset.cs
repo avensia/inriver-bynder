@@ -14,7 +14,7 @@ namespace Bynder.Api.Model
         public Dictionary<string, string> Thumbnails { get; set; }
         public DateTime DateModified { get; set; }
         [JsonIgnore]
-        public Dictionary<string, List<string>> MetaProperties { get; set; }
+        public Dictionary<string, List<string>> Properties { get; set; }
         public List<MediaItem> MediaItems { get; set; }
 
         public string GetOriginalFileName()

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using Bynder.Api;
 using Bynder.Names;
 using Bynder.Utils;
@@ -8,6 +9,7 @@ using inRiver.Remoting.Objects;
 using System.Linq;
 using System.Text;
 using Bynder.Api.Model;
+using Bynder.Config;
 using Newtonsoft.Json;
 
 namespace Bynder.Workers
@@ -30,7 +32,7 @@ namespace Bynder.Workers
             var result = new WorkerResult();
 
             // get original filename, as we need to evaluate this for further processing
-            var asset = _bynderClient.GetAssetByAssetId(bynderAssetId);
+            var asset = _bynderClient.GetAssetByAssetId(bynderAssetId, true);
 
             var originalFileName = asset.GetOriginalFileName();
 
@@ -53,7 +55,7 @@ namespace Bynder.Workers
                 _inRiverContext.ExtensionManager.DataService.GetEntityByUniqueValue(FieldTypeIds.ResourceBynderId, bynderAssetId,
                     LoadLevel.DataAndLinks);
 
-            var metapropertiesSetMap = GetConfiguredMetaPropertySetMap();
+            var propertiesSetMap = GetConfiguredPropertiesSetMap();
 
             if (resourceEntity == null)
             {
@@ -93,9 +95,9 @@ namespace Bynder.Workers
             }
 
             // set meta properties from asset
-            if (metapropertiesSetMap.Any())
+            if (propertiesSetMap.Any())
             {
-                SetMetaProperties(resourceEntity, asset, metapropertiesSetMap);
+                SetMetaProperties(resourceEntity, asset, propertiesSetMap);
             }
 
             // get related entity data found in filename so we can create or update link to these entities
@@ -135,38 +137,51 @@ namespace Bynder.Workers
             return result;
         }
 
-        private void SetMetaProperties(Entity resourceEntity, Asset asset, Dictionary<string, string> metapropertiesSetMap)
+        private void SetMetaProperties(Entity resourceEntity, Asset asset, IReadOnlyDictionary<string, PropertySetMap> propertiesSetMap)
         {
-            foreach (var fieldMetaPropery in metapropertiesSetMap)
+            foreach (var property in asset.Properties.Where(p => propertiesSetMap.ContainsKey(p.Key)))
             {
-                if (fieldMetaPropery.Key.Contains("["))
+                var propertyMap = propertiesSetMap[property.Key];
+                var field = resourceEntity.GetField(propertyMap.InRiverFieldId);
+                var value = property.Value.FirstOrDefault();
+                
+                if (field == null || string.IsNullOrEmpty(value))
                 {
-                    var fieldKeyArray = fieldMetaPropery.Key.Split('[');
-                    var field = resourceEntity.GetField(fieldKeyArray[0]);
-                    if (field == null)
-                    {
-                        continue;
-                    }
+                    continue;
+                }
 
-                    //asset.
+                if (propertyMap.CvlMapping.ContainsValue(value))
+                {
+                    field.Data = string.Join(";", propertyMap.CvlMapping.Where(p => p.Value == value));
+                }
 
+                else if (!string.IsNullOrEmpty(propertyMap.Culture))
+                {
                     if (field.IsEmpty())
                     {
                         var localeString = new LocaleString(_inRiverContext.ExtensionManager.UtilityService.GetAllLanguages());
-                        //localeString[]
+                        localeString[new CultureInfo(propertyMap.Culture)] = value;
+                        field.Data = localeString;
                     }
+                    else
+                    {
+                        var localeString = field.Data as LocaleString;
+                        localeString[new CultureInfo(propertyMap.Culture)] = value;
+                        field.Data = localeString;
+                    }
+                }
+                else
+                {
+                    field.Data = value;
                 }
             }
         }
 
-        public Dictionary<string, string> GetConfiguredMetaPropertySetMap()
+        public Dictionary<string, PropertySetMap> GetConfiguredPropertiesSetMap()
         {
-            if (_inRiverContext.Settings.ContainsKey(Config.Settings.MetaPropertySetMap))
-            {
-                return JsonConvert.DeserializeObject<Dictionary<string, string>>(_inRiverContext.Settings[Config.Settings.MetaPropertySetMap]);
-            }
-
-            return new Dictionary<string, string>();
+            return _inRiverContext.Settings.ContainsKey(Settings.PropertySetMap) 
+                ? JsonConvert.DeserializeObject<Dictionary<string, PropertySetMap>>(_inRiverContext.Settings[Settings.PropertySetMap]) 
+                : null;
         }
     }
 }

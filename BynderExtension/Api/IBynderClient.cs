@@ -9,7 +9,7 @@ namespace Bynder.Api
         string DeleteAssetUsage(string assetId, string integrationId, string resourceUrl = null);
         byte[] DownloadAsset(string assetId);
         Account GetAccount();
-        Asset GetAssetByAssetId(string assetId);
+        Asset GetAssetByAssetId(string assetId, bool getWithProperties = false);
         AssetCollection GetAssetCollection(string query, int page = 1, int limit = 10);
         AssetDownloadLocation GetAssetDownloadLocation(string assetId);
         string SetMetaProperties(string assetId, MetapropertyList metapropertyList);

@@ -92,6 +92,7 @@
     <Compile Include="Api\Model\S3File.cs" />
     <Compile Include="Api\OAuthClient.cs" />
     <Compile Include="Api\SettingNames.cs" />
+    <Compile Include="Config\PropertySetMap.cs" />
     <Compile Include="Extension\AssetLoader.cs" />
     <Compile Include="Extension\Registry.cs" />
     <Compile Include="Extension\Extension.cs" />

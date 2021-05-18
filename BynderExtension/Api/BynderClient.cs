@@ -95,21 +95,26 @@ namespace Bynder.Api
             var apiResult = Get($"{_customerBynderUrl}/api/v4/account/");
             return JsonConvert.DeserializeObject<Account>(apiResult);
         }
+
         /// <summary>
         /// get asset by asset Id
         /// </summary>
         /// <param name="assetId"></param>
+        /// <param name="getWithProperties"></param>
         /// <returns></returns>
-        public Asset GetAssetByAssetId(string assetId)
+        public Asset GetAssetByAssetId(string assetId, bool getWithProperties = false)
         {
             var apiResult = GetWithRetry($"{_customerBynderUrl}/api/v4/media/{assetId}/?versions=1");
             var asset = JsonConvert.DeserializeObject<Asset>(apiResult);
             var properties = JsonConvert.DeserializeObject<Dictionary<string, object>>(apiResult);
-            
-            asset.MetaProperties = properties
-                                    .Where(p => p.Key.StartsWith("property_"))
-                                    .ToDictionary(p => p.Key, p => (p.Value as JArray)?
-                                        .ToObject<List<string>>());
+
+            if (getWithProperties)
+            {
+                asset.Properties = properties
+                    .Where(p => p.Key.StartsWith("property_"))
+                    .ToDictionary(p => p.Key, p => (p.Value as JArray)?
+                        .ToObject<List<string>>());
+            }
 
             return asset;
         }
