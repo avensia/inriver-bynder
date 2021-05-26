@@ -5,6 +5,11 @@ namespace Bynder.Config
 {
     public class PropertySetMap
     {
+        public PropertySetMap()
+        {
+            CvlMapping = new Dictionary<string, string>();
+        }
+
         [JsonProperty("inRiverFieldId")]
         public string InRiverFieldId { get; set; }
 

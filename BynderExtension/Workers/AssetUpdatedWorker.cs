@@ -143,7 +143,7 @@ namespace Bynder.Workers
             {
                 var propertyMap = propertiesSetMap[property.Key];
                 var field = resourceEntity.GetField(propertyMap.InRiverFieldId);
-                var value = property.Value.FirstOrDefault();
+                var value = property.Value?.FirstOrDefault();
                 
                 if (field == null || string.IsNullOrEmpty(value))
                 {
@@ -152,9 +152,8 @@ namespace Bynder.Workers
 
                 if (propertyMap.CvlMapping.ContainsValue(value))
                 {
-                    field.Data = string.Join(";", propertyMap.CvlMapping.Where(p => p.Value == value));
+                    field.Data = string.Join(";", propertyMap.CvlMapping.Where(p => p.Value == value).Select(p => p.Key));
                 }
-
                 else if (!string.IsNullOrEmpty(propertyMap.Culture))
                 {
                     if (field.IsEmpty())
@@ -181,7 +180,7 @@ namespace Bynder.Workers
         {
             return _inRiverContext.Settings.ContainsKey(Settings.PropertySetMap) 
                 ? JsonConvert.DeserializeObject<Dictionary<string, PropertySetMap>>(_inRiverContext.Settings[Settings.PropertySetMap]) 
-                : null;
+                : new Dictionary<string, PropertySetMap>();
         }
     }
 }
