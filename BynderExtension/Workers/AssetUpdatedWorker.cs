@@ -152,9 +152,13 @@ namespace Bynder.Workers
                     continue;
                 }
 
-                if (propertyMap.CvlMapping.ContainsValue(value))
+                if (propertyMap.CvlMapping.Any())
                 {
-                    field.Data = string.Join(";", propertyMap.CvlMapping.Where(p => p.Value == value).Select(p => p.Key));
+                    if (propertyMap.CvlMapping.ContainsValue(value))
+                    {
+                        field.Data = string.Join(";",
+                            propertyMap.CvlMapping.Where(p => p.Value == value).Select(p => p.Key));
+                    }
                 }
                 else if (!string.IsNullOrEmpty(propertyMap.Culture))
                 {
