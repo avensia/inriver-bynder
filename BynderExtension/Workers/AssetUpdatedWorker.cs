@@ -83,6 +83,14 @@ namespace Bynder.Workers
             resourceEntity.GetField(FieldTypeIds.ResourceType).Data = asset.Type.ToString("G");
 
             var resultString = new StringBuilder();
+
+            if (propertiesSetMap.Any())
+            {
+                // set meta properties from asset
+                SetMetaProperties(resourceEntity, asset, propertiesSetMap);
+                resultString.Append($"Resource {resourceEntity.Id} updated with propertiesSetMap");
+            }
+
             if (resourceEntity.Id == 0)
             {
                 resourceEntity = _inRiverContext.ExtensionManager.DataService.AddEntity(resourceEntity);
@@ -92,12 +100,6 @@ namespace Bynder.Workers
             {
                 resourceEntity = _inRiverContext.ExtensionManager.DataService.UpdateEntity(resourceEntity);
                 resultString.Append($"Resource {resourceEntity.Id} updated");
-            }
-
-            // set meta properties from asset
-            if (propertiesSetMap.Any())
-            {
-                SetMetaProperties(resourceEntity, asset, propertiesSetMap);
             }
 
             // get related entity data found in filename so we can create or update link to these entities
