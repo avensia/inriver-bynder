@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Globalization;
 using Bynder.Api;
 using Bynder.Names;
 using Bynder.Utils;
@@ -6,6 +8,9 @@ using inRiver.Remoting.Extension;
 using inRiver.Remoting.Objects;
 using System.Linq;
 using System.Text;
+using Bynder.Api.Model;
+using Bynder.Config;
+using Newtonsoft.Json;
 
 namespace Bynder.Workers
 {
@@ -27,7 +32,7 @@ namespace Bynder.Workers
             var result = new WorkerResult();
 
             // get original filename, as we need to evaluate this for further processing
-            var asset = _bynderClient.GetAssetByAssetId(bynderAssetId);
+            var asset = _bynderClient.GetAssetByAssetId(bynderAssetId, true);
 
             var originalFileName = asset.GetOriginalFileName();
 
@@ -50,6 +55,8 @@ namespace Bynder.Workers
                 _inRiverContext.ExtensionManager.DataService.GetEntityByUniqueValue(FieldTypeIds.ResourceBynderId, bynderAssetId,
                     LoadLevel.DataAndLinks);
 
+            var propertiesSetMap = GetConfiguredPropertiesSetMap();
+
             if (resourceEntity == null)
             {
                 EntityType resourceType = _inRiverContext.ExtensionManager.ModelService.GetEntityType(EntityTypeIds.Resource);
@@ -62,11 +69,8 @@ namespace Bynder.Workers
                 resourceEntity.GetField(FieldTypeIds.ResourceFilename).Data = $"{bynderAssetId}_{asset.GetOriginalFileName()}";
             }
 
-            if (lastRunTime.HasValue || resourceEntity.Id == 0)
-            {
-                // status for new and existing ResourceEntity and full sync
-                resourceEntity.GetField(FieldTypeIds.ResourceBynderDownloadState).Data = BynderStates.Todo;
-            }
+            // status for new and existing ResourceEntity
+            resourceEntity.GetField(FieldTypeIds.ResourceBynderDownloadState).Data = BynderStates.Todo;
 
             // resource fields from regular expression created from filename
             foreach (var keyValuePair in evaluatorResult.GetResourceDataInFilename())
@@ -79,6 +83,14 @@ namespace Bynder.Workers
             resourceEntity.GetField(FieldTypeIds.ResourceType).Data = asset.Type.ToString("G");
 
             var resultString = new StringBuilder();
+
+            if (propertiesSetMap.Any())
+            {
+                // set meta properties from asset
+                SetMetaProperties(resourceEntity, asset, propertiesSetMap);
+                resultString.Append($"Resource {resourceEntity.Id} updated with propertiesSetMap");
+            }
+
             if (resourceEntity.Id == 0)
             {
                 resourceEntity = _inRiverContext.ExtensionManager.DataService.AddEntity(resourceEntity);
@@ -125,6 +137,56 @@ namespace Bynder.Workers
 
             result.Messages.Add(resultString.ToString());
             return result;
+        }
+
+        private void SetMetaProperties(Entity resourceEntity, Asset asset, IReadOnlyDictionary<string, PropertySetMap> propertiesSetMap)
+        {
+            foreach (var property in asset.Properties.Where(p => propertiesSetMap.ContainsKey(p.Key)))
+            {
+                var propertyMap = propertiesSetMap[property.Key];
+                var field = resourceEntity.GetField(propertyMap.InRiverFieldId);
+                var value = property.Value?.FirstOrDefault();
+                
+                if (field == null || string.IsNullOrEmpty(value))
+                {
+                    continue;
+                }
+
+                if (propertyMap.CvlMapping.Any())
+                {
+                    if (propertyMap.CvlMapping.ContainsValue(value))
+                    {
+                        field.Data = string.Join(";",
+                            propertyMap.CvlMapping.Where(p => p.Value == value).Select(p => p.Key));
+                    }
+                }
+                else if (!string.IsNullOrEmpty(propertyMap.Culture))
+                {
+                    if (field.IsEmpty())
+                    {
+                        var localeString = new LocaleString(_inRiverContext.ExtensionManager.UtilityService.GetAllLanguages());
+                        localeString[new CultureInfo(propertyMap.Culture)] = value;
+                        field.Data = localeString;
+                    }
+                    else
+                    {
+                        var localeString = field.Data as LocaleString;
+                        localeString[new CultureInfo(propertyMap.Culture)] = value;
+                        field.Data = localeString;
+                    }
+                }
+                else
+                {
+                    field.Data = value;
+                }
+            }
+        }
+
+        public Dictionary<string, PropertySetMap> GetConfiguredPropertiesSetMap()
+        {
+            return _inRiverContext.Settings.ContainsKey(Settings.PropertySetMap) 
+                ? JsonConvert.DeserializeObject<Dictionary<string, PropertySetMap>>(_inRiverContext.Settings[Settings.PropertySetMap]) 
+                : new Dictionary<string, PropertySetMap>();
         }
     }
 }

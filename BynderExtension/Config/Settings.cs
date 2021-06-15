@@ -9,5 +9,6 @@
         public const string inriverEntityUrl = "INRIVER_RESOURCE_URL";
         public const string bynderBrandName = "BYNDER_BRAND_NAME";
         public const string FullSyncScheduledTime = "FULL_SYNC_SCHEDULED_TIME";
+        public const string PropertySetMap = "PROPERTY_SET_MAP";
     }
 }

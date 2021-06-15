@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Newtonsoft.Json;
 
 namespace Bynder.Api.Model
 {
@@ -12,7 +13,8 @@ namespace Bynder.Api.Model
         public AssetType Type { get; set; }
         public Dictionary<string, string> Thumbnails { get; set; }
         public DateTime DateModified { get; set; }
-
+        [JsonIgnore]
+        public Dictionary<string, List<string>> Properties { get; set; }
         public List<MediaItem> MediaItems { get; set; }
 
         public string GetOriginalFileName()
